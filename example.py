@@ -12,6 +12,7 @@ from signal_modeling import (
 )
 from portfolio import PortfolioConstructor
 from risk_management import RiskManager
+from utils import build_signal_returns
 
 def main():
     """
@@ -114,18 +115,8 @@ def main():
     # 4. Portfolio Construction
     print("\n4. Constructing adaptive portfolio...")
     
-    # Calculate signal returns (assuming 1-day forward returns for simplicity)
-    signal_returns = pd.DataFrame(index=signal_features.index[1:])
-    
-    for signal_name in signal_features.columns:
-        # Use signal direction to calculate returns
-        signal = signal_features[signal_name].dropna()
-        if len(signal) > 0:
-            # Standardize signal
-            signal = (signal - signal.mean()) / signal.std()
-            
-            # Calculate returns based on signal direction
-            signal_returns[signal_name] = np.sign(signal.shift(1)) * main_data['Returns'].iloc[1:]
+    # Calculate per-signal daily returns using helper
+    signal_returns = build_signal_returns(signal_features, main_data["Returns"])
     
     # Initialize portfolio constructor
     portfolio_constructor = PortfolioConstructor(

@@ -112,7 +112,7 @@ class MarketRegimeDetector:
         feature_df = feature_df.dropna(axis=1, how='all')
             
         # Fill remaining NaNs
-        feature_df = feature_df.fillna(method='bfill').fillna(0)
+        feature_df = feature_df.bfill().fillna(0)
         
         return feature_df
 

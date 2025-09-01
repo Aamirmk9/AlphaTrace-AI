@@ -52,11 +52,11 @@ class DataLoader:
                 try:
                     ticker_obj = yf.Ticker(ticker)
                     df = ticker_obj.history(start=start_date, end=end_date, interval=interval)
-                    
-                    # Standardize column names
-                    df.columns = [col if col != "Close" else "Adj Close" if "Adj Close" in df.columns else col 
-                                 for col in df.columns]
-                    
+
+                    # Prefer adjusted close for downstream calculations
+                    if "Adj Close" in df.columns:
+                        df["Close"] = df["Adj Close"]
+
                     # Ensure standard columns exist
                     required_cols = ["Open", "High", "Low", "Close", "Volume"]
                     for col in required_cols:
@@ -97,7 +97,7 @@ class DataLoader:
         
         for ticker, df in data.items():
             # Handle missing values
-            df = df.fillna(method='ffill').fillna(method='bfill')
+            df = df.ffill().bfill()
             
             # Calculate basic features
             if 'Close' in df.columns and 'Open' in df.columns:

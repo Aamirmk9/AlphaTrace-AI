@@ -13,6 +13,7 @@ from signal_modeling import (
 )
 from portfolio import PortfolioConstructor
 from risk_management import RiskManager
+from utils import build_signal_returns
 
 def run_test():
     """
@@ -120,14 +121,8 @@ def run_test():
         # Generate signal features
         signal_features = backtester.generate_signal_features(main_data)
         
-        # Calculate signal returns
-        signal_returns = pd.DataFrame(index=signal_features.index[1:])
-        
-        for signal_name in signal_features.columns:
-            signal = signal_features[signal_name].dropna()
-            if len(signal) > 0:
-                signal = (signal - signal.mean()) / signal.std()
-                signal_returns[signal_name] = np.sign(signal.shift(1)) * main_data['Returns'].iloc[1:]
+        # Calculate signal returns using helper
+        signal_returns = build_signal_returns(signal_features, main_data['Returns'])
         
         # Initialize portfolio constructor
         portfolio_constructor = PortfolioConstructor(

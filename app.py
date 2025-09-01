@@ -16,6 +16,7 @@ from signal_modeling import (
 )
 from portfolio import PortfolioConstructor
 from risk_management import RiskManager
+from utils import build_signal_returns
 
 # Set page configuration
 st.set_page_config(
@@ -33,6 +34,17 @@ st.markdown(
     trading signals and portfolio weights based on market regimes.
     """
 )
+
+@st.cache_data(show_spinner=False)
+def fetch_data_cached(tickers, start_date_str, end_date_str, interval='1d'):
+    data_loader_local = DataLoader()
+    raw_data = data_loader_local.load_historical_data(
+        tickers=tickers,
+        start_date=start_date_str,
+        end_date=end_date_str,
+        interval=interval
+    )
+    return data_loader_local.preprocess_data(raw_data)
 
 # Sidebar for inputs
 st.sidebar.header("Data Settings")
@@ -127,22 +139,33 @@ if run_backtest:
     start_date_str = start_date.strftime('%Y-%m-%d')
     end_date_str = end_date.strftime('%Y-%m-%d')
     
-    # Load data
-    data_dict = data_loader.load_historical_data(
+    # Load and preprocess data (cached)
+    processed_data = fetch_data_cached(
         tickers=tickers,
-        start_date=start_date_str,
-        end_date=end_date_str,
+        start_date_str=start_date_str,
+        end_date_str=end_date_str,
         interval='1d'
     )
-    
-    # Preprocess data
-    processed_data = data_loader.preprocess_data(data_dict)
     
     # Create market index
     market_index = data_loader.create_market_index(processed_data)
     
     # Show first ticker data for regime detection
-    main_ticker = tickers[0]
+    if not processed_data:
+        st.error("No data could be loaded for the selected tickers and date range.")
+        st.stop()
+    
+    # Find first available ticker
+    main_ticker = None
+    for ticker in tickers:
+        if ticker in processed_data and not processed_data[ticker].empty:
+            main_ticker = ticker
+            break
+    
+    if main_ticker is None:
+        st.error("No valid data found for any of the selected tickers.")
+        st.stop()
+        
     main_data = processed_data[main_ticker]
     
     progress_bar.progress(20)
@@ -211,18 +234,8 @@ if run_backtest:
     # 4. Build portfolio
     status_text.text("Constructing adaptive portfolio...")
     
-    # Calculate signal returns (assuming 1-day forward returns for simplicity)
-    signal_returns = pd.DataFrame(index=signal_features.index[1:])
-    
-    for signal_name in signal_features.columns:
-        # Use signal direction to calculate returns
-        signal = signal_features[signal_name].dropna()
-        if len(signal) > 0:
-            # Standardize signal
-            signal = (signal - signal.mean()) / signal.std()
-            
-            # Calculate returns based on signal direction
-            signal_returns[signal_name] = np.sign(signal.shift(1)) * main_data['Returns'].iloc[1:]
+    # Calculate per-signal returns using helper
+    signal_returns = build_signal_returns(signal_features, main_data['Returns'])
     
     # Initialize portfolio constructor
     portfolio_constructor = PortfolioConstructor(

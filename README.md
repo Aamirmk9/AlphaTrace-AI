@@ -57,11 +57,14 @@ Provides comprehensive risk analytics and stress testing:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/AlphaTrace.git
-cd AlphaTrace
+git clone https://github.com/yourusername/AlphaTrace-AI.git
+cd AlphaTrace-AI
 
-# Install dependencies
-pip install -r requirements.txt
+# (Windows) Create and activate a virtual environment, then install deps
+py -m venv .venv
+.venv\Scripts\activate
+py -m pip install --upgrade pip
+py -m pip install -r requirements.txt
 ```
 
 ## Usage

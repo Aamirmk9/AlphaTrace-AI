@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
-import xgboost as xgb
-from catboost import CatBoostRegressor
+"""
+Heavy ML libraries are lazily imported in _create_model to avoid importing
+them unless needed and to provide clearer error messages when missing.
+"""
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_squared_error, r2_score
 from typing import List, Dict, Tuple, Optional, Union
@@ -287,7 +289,10 @@ class SignalCombiner:
                 "random_state": 42
             }
             params.update(self.parameters)
-            
+            try:
+                import xgboost as xgb  # type: ignore
+            except ImportError as e:
+                raise ImportError("xgboost not installed. Install via `pip install xgboost` or select model_type='catboost'.") from e
             self.model = xgb.XGBRegressor(**params)
             
         elif self.model_type == "catboost":
@@ -299,7 +304,10 @@ class SignalCombiner:
                 "verbose": False
             }
             params.update(self.parameters)
-            
+            try:
+                from catboost import CatBoostRegressor  # type: ignore
+            except ImportError as e:
+                raise ImportError("catboost not installed. Install via `pip install catboost` or select model_type='xgboost'.") from e
             self.model = CatBoostRegressor(**params)
             
         else:
@@ -434,8 +442,8 @@ class SignalBacktester:
             
             # Filter by regime if specified
             if regime_filter is not None and "regime" in df.columns:
-                if isinstance(regime_filter, int):
-                    regime_filter = [regime_filter]
+                if not isinstance(regime_filter, (list, tuple, np.ndarray)):
+                    regime_filter = [int(regime_filter)]  # Convert numpy int32 to Python int
                     
                 mask = df["regime"].isin(regime_filter)
                 signal_values = signal_values[mask]
@@ -470,8 +478,12 @@ class SignalBacktester:
                     "correlation": np.nan
                 }
                 
-            # Standardize signal
-            signal_values = (signal_values - signal_values.mean()) / signal_values.std()
+            # Standardize signal safely
+            standard_deviation = signal_values.std()
+            if standard_deviation and standard_deviation > 0 and not np.isnan(standard_deviation):
+                signal_values = (signal_values - signal_values.mean()) / standard_deviation
+            else:
+                signal_values = signal_values * 0.0
             
             # Calculate signal direction (sign)
             signal_signs = np.sign(signal_values)

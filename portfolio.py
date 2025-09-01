@@ -55,6 +55,8 @@ class PortfolioConstructor:
         # Prepare expected returns and covariance matrix
         expected_returns = returns.mean().values
         cov_matrix = returns.cov().values
+        # Numerical stability for optimization
+        cov_matrix += 1e-6 * np.eye(cov_matrix.shape[0])
         
         # Set initial weights
         initial_weights = np.ones(n_assets) / n_assets
@@ -245,15 +247,14 @@ class PortfolioConstructor:
         portfolio_value = 1.0
         backtest_data['portfolio_value'] = portfolio_value
         
-        # Last rebalance date
-        last_rebalance = signal_returns.index[0]
+        # Last rebalance position by index rather than calendar days
+        last_rebalance_i = lookback_window
         
         # Loop through trading days
         for i in range(lookback_window, len(signal_returns)):
             current_date = signal_returns.index[i]
             
             # Determine if rebalancing is needed
-            days_since_rebalance = (current_date - last_rebalance).days
             is_regime_change = False
             
             if regimes is not None:
@@ -262,7 +263,8 @@ class PortfolioConstructor:
                     is_regime_change = True
             
             # Rebalance if it's time or if regime has changed
-            if days_since_rebalance >= rebalance_frequency or is_regime_change:
+            should_rebalance = (i - last_rebalance_i) >= rebalance_frequency or is_regime_change
+            if should_rebalance:
                 # Get historical data for optimization
                 historical_returns = signal_returns.iloc[i-lookback_window:i]
                 
@@ -285,7 +287,7 @@ class PortfolioConstructor:
                 current_weights = new_weights
                 
                 # Store rebalance details
-                last_rebalance = current_date
+                last_rebalance_i = i
                 
                 # Apply transaction costs
                 portfolio_value *= (1 - txn_cost)
