@@ -2,6 +2,10 @@
 
 A Python-based real-time alpha generation and backtesting platform for quantitative finance that dynamically adjusts trading signals and portfolio weights based on market regimes (bull, bear, sideways, volatile).
 
+<img width="1919" height="907" alt="image" src="https://github.com/user-attachments/assets/aaa07c05-ae36-41e3-906b-744cc5aab298" />
+
+<img width="1917" height="909" alt="image" src="https://github.com/user-attachments/assets/8558b0cc-4260-49d5-924e-ddf25e927e37" />
+
 ## Features
 
 - **Market Regime Detection**: Automatically identify distinct market states using machine learning
